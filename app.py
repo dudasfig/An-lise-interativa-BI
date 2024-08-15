@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -7,6 +6,23 @@ import os
 from kaggle.api.kaggle_api_extended import KaggleApi
 
 st.set_page_config(layout="wide")
+
+st.title("Análise de Vendas de Propriedades em Nova York")
+st.markdown("""
+Este aplicativo interativo permite explorar e visualizar dados de vendas de propriedades na cidade de Nova York. 
+Utilizando um dataset detalhado, você pode analisar as tendências de preço, distribuição por bairros e muito mais.
+Selecione o mês desejado na barra lateral para começar a explorar.
+""")
+
+st.markdown("""
+**Observação sobre os Bairros:**
+No dataset, os bairros são representados por códigos numéricos:
+- 1: Manhattan
+- 2: Bronx
+- 3: Brooklyn
+- 4: Queens
+- 5: Staten Island
+""")
 
 api = KaggleApi()
 api.authenticate()
@@ -40,9 +56,6 @@ if not os.path.isfile(csv_file_path):
 
 df = pd.read_csv(csv_file_path)
 
-st.write("Colunas disponíveis:", df.columns)
-st.write(df.head())
-
 if 'SALE DATE' in df.columns:
     df['SALE DATE'] = pd.to_datetime(df['SALE DATE'], errors='coerce')
     df = df.dropna(subset=['SALE DATE']) 
@@ -69,6 +82,17 @@ if 'SALE DATE' in df.columns:
     if 'BOROUGH' in df.columns:
         df_filtered['BOROUGH'] = df_filtered['BOROUGH'].map(borough_map)
 
+    col1, col2 = st.columns([1, 2])  
+
+    with col1:
+        column_to_view = st.selectbox("Selecione uma coluna para visualizar os dados:", df.columns)
+        st.write(f"Dados da coluna **{column_to_view}**:")
+        st.write(df[column_to_view])
+
+    with col2:
+        st.write("Visualização Completa dos Dados Filtrados")
+        st.dataframe(df_filtered)
+
     # Gráficos
     col1, col2 = st.columns(2)
     col3, col4 = st.columns(2)
@@ -76,10 +100,11 @@ if 'SALE DATE' in df.columns:
 
     # Gráfico de preço por dia
     if 'SALE PRICE' in df.columns:
+        
         fig_date = px.bar(df_filtered, x="SALE DATE", y="SALE PRICE", color="BOROUGH", title="Preço por Dia")
         col1.plotly_chart(fig_date, use_container_width=True)
 
-     # Gráfico de Preço por Bairro (Box Plot)
+    # Gráfico de Preço por Bairro (Box Plot)
     if 'SALE PRICE' in df.columns:
         fig_price_by_borough = px.box(df_filtered, x="BOROUGH", y="SALE PRICE", title="Distribuição dos Preços por Bairro")
         col2.plotly_chart(fig_price_by_borough, use_container_width=True)
@@ -95,7 +120,6 @@ if 'SALE DATE' in df.columns:
         borough_total = df_filtered.groupby("BOROUGH")[["SALE PRICE"]].sum().reset_index()
         fig_borough_total = px.bar(borough_total, x="BOROUGH", y="SALE PRICE", title="Preço Total por Bairro")
         col4.plotly_chart(fig_borough_total, use_container_width=True)
-
 
     # Gráfico de pizza - Distribuição de Preço por Bairro
     if 'BOROUGH' in df.columns:
